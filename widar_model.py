@@ -201,12 +201,14 @@ class Widar_GRU(nn.Module):
 class Widar_LSTM(nn.Module):
     def __init__(self,num_classes):
         super(Widar_LSTM,self).__init__()
-        self.lstm = nn.LSTM(400,64,num_layers=1)
-        self.fc = nn.Linear(64,num_classes)
+        self.lstm = nn.LSTM(400,32,num_layers=1)
+        self.fc = nn.Linear(32,num_classes)
     def forward(self,x):
+        #x : 64 22 20 20  --> 64 22 400 --> 22 64 400
         x = x.view(-1,22,400)
         x = x.permute(1,0,2)
         _, (ht,ct) = self.lstm(x)
+        #ht[-1] --> 64 * 64
         outputs = self.fc(ht[-1])
         return outputs
 

@@ -3,8 +3,9 @@ import glob
 import scipy.io as sio
 import torch
 from torch.utils.data import Dataset, DataLoader
-
-
+from CSIKit.util import csitools
+from CSIKit.reader import get_reader
+import random
 def UT_HAR_dataset(root_dir):
     data_list = glob.glob(root_dir+'/UT_HAR/data/*.csv')
     label_list = glob.glob(root_dir+'/UT_HAR/label/*.csv')
@@ -74,7 +75,7 @@ class Widar_Dataset(Dataset):
         self.root_dir = root_dir
         self.data_list = glob.glob(root_dir+'/*/*.csv')
         self.folder = glob.glob(root_dir+'/*/')
-        self.category = {self.folder[i].split('/')[-2]:i for i in range(len(self.folder))}
+        self.category = {self.folder[i].split('\\')[-2]:i for i in range(len(self.folder))}
         
     def __len__(self):
         return len(self.data_list)
@@ -84,7 +85,7 @@ class Widar_Dataset(Dataset):
             idx = idx.tolist()
             
         sample_dir = self.data_list[idx]
-        y = self.category[sample_dir.split('/')[-2]]
+        y = self.category[sample_dir.split('\\')[-2]]
         x = np.genfromtxt(sample_dir, delimiter=',')
         
         # normalize
@@ -98,3 +99,42 @@ class Widar_Dataset(Dataset):
 
         return x,y
 
+def read_split_data(root_dir: str, val_rate: float = 0.2):
+    random.seed(0)
+    data_list = glob.glob(root_dir + '/*/*.dat')
+    train_files_path = []
+    val_files_path = []
+    val_path = random.sample(data_list, k=int(len(data_list) * val_rate))
+    for path in data_list:
+        if path in val_path:  # 如果该路径在采样的验证集样本中则存入验证集
+            val_files_path.append(path)
+        else:  # 否则存入训练集
+            train_files_path.append(path)
+    print("{} files for training.".format(len(train_files_path)))
+    print("{} files for validation.".format(len(val_files_path)))
+    return  train_files_path,val_files_path
+
+class Widar3_Dataset(Dataset):
+    def __init__(self,data_list):
+        self.data_list = data_list
+        self.category = {i:i for i in range(0,6)}
+        self.reader=get_reader(self.data_list[0])
+        pass
+
+    def __len__(self):
+        return len(self.data_list)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        sample_file = self.data_list[idx]
+        y = self.category[int(sample_file.split('\\')[-1].split('-')[1])-1]
+        my_reader = get_reader(sample_file)
+        #print(f"###processing-->{sample_file}")
+        csi_data = my_reader.read_file(sample_file)
+        csi_matrix, _, _ = csitools.get_CSI(csi_data, metric="amplitude")
+        x=csi_matrix[:,:,0,0]
+        x = torch.FloatTensor(x)
+
+        return x, y

@@ -2,13 +2,14 @@ from dataset import *
 from UT_HAR_model import *
 from NTU_Fi_model import *
 from widar_model import *
+from widar3_model import *
 from self_supervised_model import *
 import torch
 
-def load_data_n_model(dataset_name, model_name, root):
-    classes = {'UT_HAR_data':7,'NTU-Fi-HumanID':14,'NTU-Fi_HAR':6,'Widar':22}
+def load_data_n_model(dataset_name, model_name, root,logger):
+    classes = {'UT_HAR_data':7,'NTU-Fi-HumanID':14,'NTU-Fi_HAR':6,'Widar':22,'Widar3':6}
     if dataset_name == 'UT_HAR_data':
-        print('using dataset: UT-HAR DATA')
+        logger.info('using dataset: UT-HAR DATA')
         data = UT_HAR_dataset(root)
         train_set = torch.utils.data.TensorDataset(data['X_train'],data['y_train'])
         test_set = torch.utils.data.TensorDataset(torch.cat((data['X_val'],data['X_test']),0),torch.cat((data['y_val'],data['y_test']),0))
@@ -167,7 +168,7 @@ def load_data_n_model(dataset_name, model_name, root):
     elif dataset_name == 'Widar':
         print('using dataset: Widar')
         num_classes = classes['Widar']
-        train_loader = torch.utils.data.DataLoader(dataset=Widar_Dataset(root + 'Widardata/train/'), batch_size=64, shuffle=True)
+        train_loader = torch.utils.data.DataLoader(dataset=Widar_Dataset(root + 'Widardata/train/'), batch_size=1, shuffle=True)
         test_loader = torch.utils.data.DataLoader(dataset=Widar_Dataset(root + 'Widardata/test/'), batch_size=128, shuffle=False)
         if model_name == 'MLP':
             print("using model: MLP")
@@ -213,7 +214,22 @@ def load_data_n_model(dataset_name, model_name, root):
             print("using model: ViT")
             model = Widar_ViT(num_classes=num_classes)
             train_epoch = 200
-        return train_loader, test_loader, model, train_epoch
+
+    elif dataset_name == 'Widar3':
+        logger.info('using dataset: Widar3')
+        num_classes = classes['Widar3']
+        #train_files_path,val_files_path=read_split_data(root)
+        train_files_path = glob.glob(root + '/train/*.dat')
+        val_files_path = glob.glob(root + '/test/*.dat')
+        train_loader = torch.utils.data.DataLoader(dataset=Widar3_Dataset(train_files_path), batch_size=1,
+                                                   shuffle=True)
+        test_loader = torch.utils.data.DataLoader(dataset=Widar3_Dataset(val_files_path), batch_size=1,
+                                                  shuffle=False)
+        if model_name == 'LSTM':
+            logger.info("using model: LSTM")
+            model = Widar3_LSTM(num_classes)
+            train_epoch = 20  # 20
+    return train_loader, test_loader, model, train_epoch
 
 
 def load_unsupervised_data_n_model(model_name,root):

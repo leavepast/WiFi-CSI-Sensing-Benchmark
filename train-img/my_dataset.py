@@ -20,7 +20,7 @@ class MyDataSet(Dataset):
         if img.mode != 'RGBA':
             raise ValueError("image: {} isn't RGB mode.".format(self.files_path[item]))
         img = img.convert('RGB')
-        label = self.category[int(self.files_path[item].split('\\')[-1].split('-')[1])-1]
+        label = self.category[int(self.files_path[item].split('/')[-1].split('-')[1])-1]
 
         if self.transform is not None:
             img = self.transform(img)

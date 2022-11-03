@@ -11,10 +11,11 @@ import torch.optim.lr_scheduler as lr_scheduler
 from model import create_regnet
 from my_dataset import MyDataSet
 from utils import read_widar_data, train_one_epoch, evaluate
+from loguru import logger
 
-
+@logger.catch
 def main(args):
-    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:5" if torch.cuda.is_available() else "cpu")
 
     print(args)
     print('Start Tensorboard with "tensorboard --logdir=runs", view at http://localhost:6006/')
@@ -44,8 +45,7 @@ def main(args):
 
     batch_size = args.batch_size
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
-    nw=0
-    print('Using {} dataloader workers every process'.format(nw))
+    logger.debug('Using {} dataloader workers every process'.format(nw))
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=batch_size,
                                                shuffle=True,
@@ -104,7 +104,7 @@ def main(args):
                        data_loader=val_loader,
                        device=device)
 
-        print("[epoch {}] accuracy: {}".format(epoch, round(acc, 3)))
+        logger.debug("[epoch {}] accuracy: {}".format(epoch, round(acc, 3)))
         tags = ["loss", "accuracy", "learning_rate"]
         tb_writer.add_scalar(tags[0], mean_loss, epoch)
         tb_writer.add_scalar(tags[1], acc, epoch)
@@ -116,7 +116,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_classes', type=int, default=6)
-    parser.add_argument('--epochs', type=int, default=30)
+    parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--lrf', type=float, default=0.01)
@@ -124,7 +124,7 @@ if __name__ == '__main__':
     # 数据集所在根目录
     # https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos.tgz
     parser.add_argument('--data-path', type=str,
-                        default=r"E:\wifi\Widar3.0\CSI\20181109_cis_raw_img/")
+                        default=r"/home/data1/wifi/20181109_cis_raw_img/")
     parser.add_argument('--model-name', default='RegNetY_400MF', help='create model name')
 
     # 预训练权重下载地址
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument('--weights', type=str, default='',
                         help='initial weights path')
     parser.add_argument('--freeze-layers', type=bool, default=False)
-    parser.add_argument('--device', default='cuda:0', help='device id (i.e. 0 or 0,1 or cpu)')
+    parser.add_argument('--device', default='cuda:5', help='device id (i.e. 0 or 0,1 or cpu)')
 
     opt = parser.parse_args()
 
